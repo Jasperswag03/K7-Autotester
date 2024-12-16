@@ -2,7 +2,7 @@ import subprocess
 import time
 import argparse
 
-test_count = 0
+test_count = 1
 
 def run_k6(target_vus, duration, rampup_time, test_script, args):
     print(f"Running K6 with {target_vus} VUs for {duration}s (ramp-up: {rampup_time}s)...")
@@ -59,8 +59,8 @@ def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_betwe
 
 
 def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
-    print(f"\nValidating maximum VU count: {max_vus}")
-    print(f"---------------------------\n")
+    print(f"\033[93m\nValidating maximum VU count: {max_vus}")
+    print(f"---------------------------\n\033[0m")
     
     for i in range(validation_runs):
         global test_count
@@ -103,7 +103,7 @@ def banner():
    {GREEN} $$  _$$<   $$  /       {ORANGE} /`            `\\
    {GREEN} \\__|  \\__|\\__/       {ORANGE}  /________________|    
    
-{RESET}------------------------------------------------------------------------------------""" )
+------------------------------------------------------------------------------------{RESET}""" )
 
 
 if __name__ == "__main__":
@@ -159,7 +159,7 @@ if __name__ == "__main__":
         while True:
             try:
                 rampup_time = validate_positive_int(input("Enter the ramp up time (in seconds): "), "Ramp up time")
-                print("------------------------------------------------------------------------------------\n")
+                print("\033[93m------------------------------------------------------------------------------------\n\033[0m")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
