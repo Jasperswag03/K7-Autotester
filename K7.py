@@ -25,12 +25,15 @@ def run_k6(target_vus, duration, rampup_time, test_script, args):
     process.wait()
     return process.returncode == 0
 
-def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
+def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args):
     current_vus = initial_vus
+    failed_tests = 0
     while True:
         global test_count
         print(f"Test #{test_count}")
         test_count += 1
+        if (failed_tests > 0):
+            print(f"Fails: {failed_tests}/{fails_allowed}")
         passed = run_k6(current_vus, duration, rampup_time, test_script, args)
         if passed:
             print(f"Test passed for {current_vus} VUs.")
@@ -39,18 +42,22 @@ def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_betwe
             time.sleep(delay_between_tests)
         else:
             print(f"Test failed for {current_vus} VUs.")
-            reduced_vus = current_vus - (increment // 2)
-            print(f"Reducing VUs to {reduced_vus}. Now validating...\n")
-            return find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, test_script, args)
-            
+            if (failed_tests == fails_allowed):
+                reduced_vus = current_vus - (increment // 2)
+                print(f"Reducing VUs to {reduced_vus}. Now validating...\n")
+                time.sleep(delay_between_tests)
+                return find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args)
+            failed_tests += 1
+            print(f"Waiting {delay_between_tests} seconds before the next test...\n")
+            time.sleep(delay_between_tests)
            
             
-def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
+def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args):
      while True:
         if (reduced_vus <= 0):
             print("The VU count has reached zero. The testing process failed. Exiting...")
             return 0
-        if validate_max_vus(reduced_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
+        if validate_max_vus(reduced_vus, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args):
             return reduced_vus
         else:
             print(f"Validation failed for {reduced_vus} VUs.")
@@ -58,28 +65,56 @@ def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_betwe
             print(f"Reducing VUs further to {reduced_vus} and validating again...\n")
 
 
-def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
+def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args):
     print(f"\033[93m\nValidating maximum VU count: {max_vus}")
     print("---------------------------\n\033[0m")
+    global test_count
+    failed_tests = 0
+    i = 0
     
-    for i in range(validation_runs):
-        global test_count
+    while i < validation_runs:
         print(f"Test #{test_count}")
         test_count += 1
         print(f"Validation run {i+1}/{validation_runs}")
+        
+        if failed_tests > 0:
+            print(f"Fails: {failed_tests}/{fails_allowed}")
+        
         passed = run_k6(max_vus, duration, rampup_time, test_script, args)
+        
         if not passed:
             print(f"Validation run {i+1} failed.")
-            return False
+            if failed_tests >= fails_allowed:
+                return False
+            failed_tests += 1
+            i -= 1
+            print(f"Retrying run {i+2}")
+        else:
+            print(f"Validation run {i+1} passed.")
+        
         if i + 1 < validation_runs:
-             print(f"Waiting {delay_between_tests} seconds before the next validation test...\n")
-        time.sleep(delay_between_tests)
+            print(f"Waiting {delay_between_tests} seconds before the next validation test...\n")
+            time.sleep(delay_between_tests)
+        
+        i += 1
+        
     return True
 
 def validate_positive_int(value, name):
     try:
         ivalue = int(value)
         if ivalue <= 0:
+            raise ValueError(f"{name} must be a positive integer.")
+        if ivalue > 10000000:
+            raise ValueError(f"{name} must not exceed 10000000.")
+        return ivalue
+    except ValueError as e:
+        raise argparse.ArgumentTypeError(str(e))
+
+def validate_positive_or_zero_int(value, name):
+    try:
+        ivalue = int(value)
+        if ivalue < 0:
             raise ValueError(f"{name} must be a positive integer.")
         if ivalue > 10000000:
             raise ValueError(f"{name} must not exceed 10000000.")
@@ -111,10 +146,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Automated K6 VU testing.")
     parser.add_argument("-vu", "--initial_vus", type=lambda x: validate_positive_int(x, "Initial VUs"), help="Initial number of virtual users. Use a lower initial value when the tests fail immediatly.")
     parser.add_argument("-i", "--increment", type=lambda x: validate_positive_int(x, "Increment"), help="Increment for VUs. Lower values increase the accuracy of the test. however, it will take longer to find the maximum stable VU count. Recommended: 100.")
-    parser.add_argument("-vr", "--validation_runs", type=lambda x: validate_positive_int(x, "Validation runs"), help="Number of validation runs (default: 4).")
-    parser.add_argument("-d", "--delay_between_tests", type=lambda x: validate_positive_int(x, "Delay between tests"), help="Delay between tests in seconds (default: 10).")
+    parser.add_argument("-vr", "--validation_runs", type=lambda x: validate_positive_or_zero_int(x, "Validation runs"), help="Number of validation runs (default: 4).")
+    parser.add_argument("-d", "--delay_between_tests", type=lambda x: validate_positive_or_zero_int(x, "Delay between tests"), help="Delay between tests in seconds (default: 10).")
     parser.add_argument("-t", "--duration", type=lambda x: validate_positive_int(x, "Duration"), help="K6 test duration in seconds (default: 60).")
-    parser.add_argument("-rt", "--rampup_time", type=lambda x: validate_positive_int(x, "Rampup time"), help="Ramp-up time in seconds (default: 15).")
+    parser.add_argument("-rt", "--rampup_time", type=lambda x: validate_positive_or_zero_int(x, "Rampup time"), help="Ramp-up time in seconds (default: 15).")
+    parser.add_argument("-f", "--fails", type=lambda x: validate_positive_or_zero_int(x, "Fails allowed"), help="Amount of fails allowed before decreasing VU's. Probably should keep this below the amount of validation runs. (default: 1).")
     parser.add_argument("-v", "--verbose", action="store_true", help="Verbose output. Shows K6 logs.")
     parser.add_argument("--k6_script", type=str, help="Path to the K6 test script. Please refer to the template test-script.js")
 
@@ -140,13 +176,13 @@ if __name__ == "__main__":
         
         while True:
             try:
-                validation_runs = validate_positive_int(input("Enter the number of validation runs (recommended: 4): "), "Validation runs")
+                validation_runs = validate_positive_or_zero_int(input("Enter the number of validation runs (recommended: 4): "), "Validation runs")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
         while True:
             try:
-                delay_between_tests = validate_positive_int(input("Enter the delay between tests (in seconds): "), "Delay between tests")
+                delay_between_tests = validate_positive_or_zero_int(input("Enter the delay between tests (in seconds): "), "Delay between tests")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
@@ -158,7 +194,13 @@ if __name__ == "__main__":
                 print(e)
         while True:
             try:
-                rampup_time = validate_positive_int(input("Enter the ramp up time (in seconds): "), "Ramp up time")
+                rampup_time = validate_positive_or_zero_int(input("Enter the ramp up time (in seconds): "), "Ramp up time")
+                break
+            except argparse.ArgumentTypeError as e:
+                print(e)
+        while True:
+            try:
+                fails_allowed = validate_positive_or_zero_int(input("Enter the amount of fails alllowed: "), "amount of fails allowed before decreasing VU's")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
@@ -168,6 +210,7 @@ if __name__ == "__main__":
         delay_between_tests = args.delay_between_tests or 10
         duration = args.duration or 60
         rampup_time = args.rampup_time or 15
+        fails_allowed = args.fails or 1
 
     print("\n\033[93mFinding the breakpoint.")
     print("---------------------------\n\033[0m")
@@ -179,6 +222,7 @@ if __name__ == "__main__":
         delay_between_tests,
         duration,
         rampup_time,
+        fails_allowed,
         test_script,
         args
     )
