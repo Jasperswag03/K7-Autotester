@@ -1,78 +1,155 @@
-# Automated K6 VU Testing
+# Automated K6 Load Testing with Virtual Users
+
+This repository provides a K6 test script designed to automate load testing for HTTP-based systems. It allows you to simulate multiple virtual users (VUs), gradually ramp up the load, and evaluate system performance based on defined thresholds.
+
+## Table of Contents
+
+1. [Overview](#overview)
+2. [Test Script](#test-script)
+3. [Configuration Options](#configuration-options)
+4. [Authentication Setup (Optional)](#authentication-setup-optional)
+5. [Running the Test](#running-the-test)
+6. [Thresholds and Validation](#thresholds-and-validation)
+7. [Endpoints Supported](#endpoints-supported)
+
+---
 
 ## Overview
 
-This project automates the process of testing and validating Virtual User (VU) scalability with K6. The script runs tests to determine the maximum number of Virtual Users that a system can handle while maintaining performance thresholds. It gradually increases the VUs, runs tests, and validates if the system can handle the load before continuing to increase the VUs.
+The system runs K6 load tests with two primary phases:
 
-Additionally, the test script provided is designed for HTTP load testing, with adjustable configurations for ramp-up, load duration, and performance thresholds.
+1. **Ramp-Up Phase**: Virtual users are gradually increased.
+2. **Instant Load Phase**: A constant load of VUs is maintained.
 
-## Features
+The tests also validate that performance thresholds are met and ensure that the system can handle the specified load without issues.
 
-- **K6 Testing**: Run automated K6 tests with configurable VUs, duration, ramp-up time, and validation runs.
-- **Automated Scaling**: Automatically increases VUs in each test until failure is detected, then validates the maximum stable VU count.
-- **Thresholds and Validation**: Configurable thresholds for request errors and response times (e.g., HTTP request failures below 1%, and 95% of requests should be under 1000ms).
-- **Customizable Configuration**: Multiple arguments to customize initial VUs, increments, validation runs, duration, and ramp-up time.
+---
 
-## Test Script Example
+## Test Script
 
-The accompanying `test-script.js` file is designed to test your HTTP endpoints with configurable ramp-up and constant load phases. Here’s an overview of how the script works:
+The main test script (`test-script.js`) simulates virtual users (VUs) performing HTTP GET requests. The script is designed with two load phases and uses K6's `ramping-vus` and `constant-vus` executors to control how VUs are scaled.
 
-### Configuration
+Here’s an example of the script:
 
-javascript
+```javascript
+import http from 'k6/http';
+import { check, sleep } from 'k6';
 
-Copy code
+// Configuration for virtual users, ramp-up, and test duration
+const target = __ENV.VUS || 300;
+const rampupTime = __ENV.RAMPUP || "5s";
+const duration = __ENV.DURATION || "1m";
 
-`import http from 'k6/http'; import { check, sleep } from 'k6';  // Environment variables for test configuration const target = __ENV.VUS || 300; const rampupTime = __ENV.RAMPUP || "5s"; const duration = __ENV.DURATION || "1m";  // K6 options for test scenarios export const options = {   scenarios: {     rampUp: {       executor: 'ramping-vus',       startVUs: 0,       stages: [           { duration: rampupTime, target: target }, // Ramp-up phase       ],       tags: { rampUp: 'true' },     },     instantLoad: {       executor: 'constant-vus',       vus: target,        duration: duration,       startTime: rampupTime,        tags: { rampUp: 'false' }, // Instant load phase     },   },   thresholds: {     // Performance thresholds to abort test on failure     'http_req_failed{rampUp:false}': [{ threshold: 'rate==0', abortOnFail: true }],      'http_req_duration{rampUp:false}': [{ threshold: 'p(95)<1000', abortOnFail: true }], // 95% requests < 1000ms   },   summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)'], // Stats without ramp-up };  // Main function for the virtual user to execute export default function () {   // HTTP GET requests   http.get('http://localhost:3000/channel');   http.get('http://localhost:3000/channel/create');   sleep(1); // Simulate wait time between requests }`
+export const options = {
+  scenarios: {
+    rampUp: {
+      executor: 'ramping-vus',
+      startVUs: 0,
+      stages: [{ duration: rampupTime, target: target }],
+      tags: { rampUp: 'true' },
+    },
+    instantLoad: {
+      executor: 'constant-vus',
+      vus: target,
+      duration: duration,
+      startTime: rampupTime,
+      tags: { rampUp: 'false' },
+    },
+  },
+  thresholds: {
+    'http_req_failed{rampUp:false}': [{ threshold: 'rate==0', abortOnFail: true }],
+    'http_req_duration{rampUp:false}': [{ threshold: 'p(95)<1000', abortOnFail: true }],
+  },
+  summaryTrendStats: ['avg', 'min', 'med', 'max', 'p(90)', 'p(95)'],
+};
 
-### Key Parameters
+// Main function executed by each virtual user
+export default function () {
+  http.get('http://localhost:3000/channel');
+  http.get('http://localhost:3000/channel/create');
+  sleep(1); // Simulate time between requests
+}
+```
 
-- **VUS**: Number of virtual users to simulate during the test (default: 300).
-- **RAMPUP**: Time to gradually increase the VUs (default: 5 seconds).
-- **DURATION**: Duration of the test (default: 1 minute).
-- **Thresholds**: Performance limits for HTTP requests:
-    - Requests should not fail (rate=0).
-    - 95% of requests should complete within 1000ms.
+---
 
-### Additional Setup for Authentication (Optional)
+## Configuration Options
 
-If your test requires JWT authentication, you can set up a login function to obtain the token:
+The script allows you to configure various options via environment variables:
 
-javascript
+- **VUS (Virtual Users)**: Number of virtual users to simulate (default: 300).
+- **RAMPUP**: Duration for gradually increasing virtual users (default: 5s).
+- **DURATION**: Total duration of the constant load phase (default: 1m).
 
-Copy code
+### Example Command to Run the Test:
+```bash
+VUS=500 RAMPUP=10s DURATION=2m k6 run test-script.js
+```
 
-``export function setup() {   const loginHeaders = { 'Content-Type': 'application/json' };    const loginResponse = http.post('http://localhost/auth/login', JSON.stringify({     name: 'your_username',     password: 'your_password',   }), { headers: loginHeaders });    const isLoginSuccessful = check(loginResponse, {     'login successful': (res) => res.status === 200 && res.json('accessToken') !== undefined,   });    if (!isLoginSuccessful) {     throw new Error('Login failed');   }    return loginResponse.json('accessToken'); }  export default function (accessToken) {   // Use the accessToken for requests   const authHeaders = { Authorization: `Bearer ${accessToken}` };    http.get('http://localhost:3000/channel', { headers: authHeaders });   http.get('http://localhost:3000/channel/create', { headers: authHeaders });   sleep(1); }``
+---
 
-### HTTP Methods Supported
+## Authentication Setup (Optional)
 
-- **GET**: Fetch data from an endpoint.
-- **POST**: Send data to an endpoint. E.g., login or create resources.
-- **TRACE**: Not allowed in K6.
+If your test requires JWT authentication, you can set up the login flow as follows:
 
-### Example of HTTP Request Usage:
+```javascript
+export function setup() {
+  const loginHeaders = { 'Content-Type': 'application/json' };
 
-javascript
+  const loginResponse = http.post('http://localhost/auth/login', JSON.stringify({
+    name: 'your_username',
+    password: 'your_password',
+  }), { headers: loginHeaders });
 
-Copy code
+  const isLoginSuccessful = check(loginResponse, {
+    'login successful': (res) => res.status === 200 && res.json('accessToken') !== undefined,
+  });
 
-`// GET request: http.get('http://localhost/api/endpoint');  // POST request with JSON body: http.post('http://localhost/api/endpoint', JSON.stringify({ key: 'value' }), { headers: { 'Content-Type': 'application/json' } });`
+  if (!isLoginSuccessful) {
+    throw new Error('Login failed');
+  }
 
-### Running the Test
+  return loginResponse.json('accessToken');
+}
 
-1. Clone or download the repository.
-2. Install K6 by following the installation instructions on the K6 website.
-3. Run the main Python script to execute the test process.
-4. The script will handle the execution of K6 tests, incrementing the VUs, and validating the performance thresholds.
-5. Check the console output for detailed logs on the test progress and results.
+export default function (accessToken) {
+  const authHeaders = { Authorization: `Bearer ${accessToken}` };
 
-## Arguments
+  http.get('http://localhost:3000/channel', { headers: authHeaders });
+  http.get('http://localhost:3000/channel/create', { headers: authHeaders });
+  sleep(1);
+}
+```
 
-- `-vu, --initial_vus`: Initial number of virtual users.
-- `-i, --increment`: The increment by which the VUs increase.
-- `-vr, --validation_runs`: Number of validation runs for the maximum stable VU count.
-- `-d, --delay_between_tests`: Delay (in seconds) between test runs.
-- `-t, --duration`: Duration of each K6 test in seconds.
-- `-rt, --rampup_time`: Ramp-up time in seconds.
-- `-v, --verbose`: Enable verbose logging to see detailed K6 logs.
-- `--k6_script`: Path to the K6 test script (default is `Scripts/test-script.js`).
+---
+
+## Running the Test
+
+1. Install K6 by following the official installation guide.
+2. Set the required environment variables:
+    - `VUS`: Virtual users to simulate.
+    - `RAMPUP`: Time to gradually increase virtual users.
+    - `DURATION`: Duration of the constant load phase.
+3. Run the K6 script with the following command:
+    `k6 run test-script.js`
+4. Check the K6 output for detailed logs, test progress, and results.
+
+---
+
+## Thresholds and Validation
+
+The following performance thresholds are defined for validation:
+
+- **HTTP request failures**: The failure rate should be 0% (`rate==0`).
+- **HTTP request duration**: 95% of requests should complete within 1000ms (`p(95)<1000`).
+
+If the thresholds are exceeded, the test will be aborted.
+
+---
+
+## Endpoints Supported
+
+- **GET** requests are supported for fetching data (e.g., `/channel`, `/channel/create`).
+- **POST** requests are supported with JSON bodies (e.g., for authentication).
+
+The **TRACE** method is not supported in K6.
