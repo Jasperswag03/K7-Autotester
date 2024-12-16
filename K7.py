@@ -60,7 +60,7 @@ def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_betwe
 
 def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
     print(f"\033[93m\nValidating maximum VU count: {max_vus}")
-    print(f"---------------------------\n\033[0m")
+    print("---------------------------\n\033[0m")
     
     for i in range(validation_runs):
         global test_count
@@ -169,7 +169,8 @@ if __name__ == "__main__":
         duration = args.duration or 60
         rampup_time = args.rampup_time or 15
 
-    
+    print("\n\033[93mFinding the breakpoint.")
+    print("---------------------------\n\033[0m")
 
     max_vus = find_max_vus_increasing(
         initial_vus,
@@ -183,4 +184,4 @@ if __name__ == "__main__":
     )
 
     if max_vus > 0:
-        print(f"---------------------------\nSuccessfully validated {max_vus} as the maximum stable VU count.\n---------------------------")
+        print(f"\n\033[93m----------------------------------------------------------\nSuccessfully validated {max_vus} as the maximum stable VU count.\n----------------------------------------------------------\033[0m")
