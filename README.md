@@ -2,7 +2,7 @@
 
 This repository includes two components:
 1. **K7 Load Test Automation**  
-    This Python-based system, called **K7**, automates the execution of K6 scripts. K7 goes beyond simply ramping up the load; it determines the **approximate maximum number of stable virtual users (VUs)** that can hit every endpoint of a system every second without causing a performance breakdown. This enables the identification of a system's breaking point quickly and efficiently.
+    This Python-based system, called **K7**, automates the execution of K6 scripts. K7 goes beyond simply ramping up the load; it determines the **approximate maximum number of stable virtual users (VUs)** that can hit every endpoint of a system every second without causing a performance breakdown.
 2. **K6 Test Script**  
 	A load testing script for [K6](https://k6.io/), an open-source tool from Grafana. The script simulates multiple virtual users (VUs), gradually ramps up the load, and evaluates system performance based on defined thresholds.
 
