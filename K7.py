@@ -159,10 +159,10 @@ if __name__ == "__main__":
         while True:
             try:
                 rampup_time = validate_positive_int(input("Enter the ramp up time (in seconds): "), "Ramp up time")
-                print("\033[93m------------------------------------------------------------------------------------\n\033[0m")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
+        print("\033[93m------------------------------------------------------------------------------------\n\033[0m")
     else:
         validation_runs = args.validation_runs or 4
         delay_between_tests = args.delay_between_tests or 10
