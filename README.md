@@ -1,6 +1,12 @@
 # Automated K6 Load Testing with Virtual Users
 
-This repository provides a K6 test script designed to automate load testing for HTTP-based systems. It allows you to simulate multiple virtual users (VUs), gradually ramp up the load, and evaluate system performance based on defined thresholds.
+This repository includes two components:
+1. **K7 Load Test Automation**  
+    This Python-based system, humorously called **K7**, automates the execution of K6 scripts. K7 goes beyond simply ramping up the load; it determines the **approximate maximum number of stable virtual users (VUs)** that can hit every endpoint of a system every second without causing a performance breakdown. This enables the identification of a system's breaking point quickly and efficiently.
+2. **K6 Test Script**  
+	A load testing script for [K6](https://k6.io/), an open-source tool from Grafana. The script simulates multiple virtual users (VUs), gradually ramps up the load, and evaluates system performance based on defined thresholds.
+
+While K6 provides the core load testing capabilities, K7 adds advanced orchestration and automation, making the process more efficient and precise.
 
 ## Table of Contents
 
@@ -21,13 +27,14 @@ The system runs K6 load tests with two primary phases:
 
 The tests also validate that performance thresholds are met and ensure that the system can handle the specified load without issues.
 
-In addition, the **K7 Python script** can be used to manage and execute tests with added flexibility, including verbosity (`--v`) and help (`--h`) flags.
+In addition, the **K7 Python script** can be used to manage and execute tests with added flexibility, including verbosity (`-v`/`--verbose`) and help (`-h`/`--help`) flags.
 
 ---
 ### Command-Line Arguments
 This script accepts the following options for configuring the test:
+* **`-h`/`--help`**: Returns a list of all the configuration options.
 - **`-vu` / `--initial_vus`**: Set the initial number of virtual users. Lower values help when tests fail immediately.
-- **`-i` / `--increment`**: Set the increment for virtual users. Smaller increments increase accuracy but take longer to determine the stable VU count. Default: 100.
+- **`-i` / `--increment`**: Set the increment for virtual users. Smaller increments increase accuracy but take longer to determine the stable VU count. (Recommended: 100)
 - **`-vr` / `--validation_runs`**: Set the number of validation runs. Default is 4.
 - **`-d` / `--delay_between_tests`**: Set the delay between tests in seconds. Default is 10 seconds.
 - **`-t` / `--duration`**: Set the K6 test duration in seconds. Default is 60 seconds.
@@ -50,12 +57,12 @@ This example runs the script with the following:
 - Using `test-script.js` as the K6 test script (`--k6_script test-script.js`), you can add your own test-script to this if you want.
 
 ### Notes:
-- **`-v` (verbose) output** will display detailed logs.
+- **`-v` (verbose) output** will display all K6 output.
 - **`--k6_script`** should point to the K6 test script you're using.
 
 ---
 ## Test Script
-The main test script (`test-script.js`) simulates virtual users (VUs) performing HTTP GET requests. The script is designed with two load phases and uses K6's `ramping-vus` and `constant-vus` executors to control how VUs are scaled.
+The main test script (`test-script.js`) simulates virtual users (VUs) making HTTP GET requests. It is structured with two distinct load phases, utilizing K6's `ramping-vus` and `constant-vus` executors to manage the scaling of VUs. The only modifications required in this script are the **endpoints** and, optionally, the **setup** function if your tests need authentication or other initialization steps.
 
 Here’s an example of the script:
 ```javascript
@@ -143,7 +150,6 @@ If the thresholds are exceeded, the test will be aborted.
 
 ---
 ## Endpoints Supported
-- **GET** requests are supported for fetching data (e.g., `/channel`, `/channel/create`).
-- **POST** requests are supported with JSON bodies (e.g., for authentication).
+All HTTP methods are support in K6 except for trace (which sucks anyway), for more information about this visit the [K6 docs](https://k6.io/).
 
 ---
