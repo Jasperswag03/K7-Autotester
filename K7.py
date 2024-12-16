@@ -47,15 +47,15 @@ def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_betwe
             
 def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
      while True:
-                if (reduced_vus <= 0):
-                    print("The VU count has reached zero. The testing process failed. Exiting...")
-                    return 0
-                if validate_max_vus(reduced_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
-                    return reduced_vus
-                else:
-                    print(f"Validation failed for {reduced_vus} VUs.")
-                    reduced_vus -= (increment // 2)
-                    print(f"Reducing VUs further to {reduced_vus} and validating again...\n")
+        if (reduced_vus <= 0):
+            print("The VU count has reached zero. The testing process failed. Exiting...")
+            return 0
+        if validate_max_vus(reduced_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
+            return reduced_vus
+        else:
+            print(f"Validation failed for {reduced_vus} VUs.")
+            reduced_vus -= (increment // 2)
+            print(f"Reducing VUs further to {reduced_vus} and validating again...\n")
 
 
 def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
@@ -123,17 +123,17 @@ if __name__ == "__main__":
     test_script = args.k6_script or "Scripts/test-script.js"
 
     while True:
-            try:
-              initial_vus = args.initial_vus or validate_positive_int(input("Enter the initial number of virtual users (VUs): "), "Initial VUs")
-              break
-            except argparse.ArgumentTypeError as e:
-                print(e)
+        try:
+            initial_vus = args.initial_vus or validate_positive_int(input("Enter the initial number of virtual users (VUs): "), "Initial VUs")
+            break
+        except argparse.ArgumentTypeError as e:
+            print(e)
     while True:
-            try:
-                increment = args.increment or validate_positive_int(input("Enter the increment the VU amount increases with each test: "), "Increment")
-                break
-            except argparse.ArgumentTypeError as e:
-                print(e)
+        try:
+            increment = args.increment or validate_positive_int(input("Enter the increment the VU amount increases with each test: "), "Increment")
+            break
+        except argparse.ArgumentTypeError as e:
+            print(e)
     
     
     if not any(vars(args).values()):
