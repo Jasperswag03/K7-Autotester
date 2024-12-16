@@ -2,6 +2,7 @@ import subprocess
 import time
 import argparse
 
+test_count = 0
 
 def run_k6(target_vus, duration, rampup_time, test_script, args):
     print(f"Running K6 with {target_vus} VUs for {duration}s (ramp-up: {rampup_time}s)...")
@@ -27,6 +28,9 @@ def run_k6(target_vus, duration, rampup_time, test_script, args):
 def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
     current_vus = initial_vus
     while True:
+        global test_count
+        print(f"Test #{test_count}")
+        test_count += 1
         passed = run_k6(current_vus, duration, rampup_time, test_script, args)
         if passed:
             print(f"Test passed for {current_vus} VUs.")
@@ -55,8 +59,13 @@ def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_betwe
 
 
 def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, rampup_time, test_script, args):
-    print(f"Validating maximum VU count: {max_vus}")
+    print(f"\nValidating maximum VU count: {max_vus}")
+    print(f"---------------------------\n")
+    
     for i in range(validation_runs):
+        global test_count
+        print(f"Test #{test_count}")
+        test_count += 1
         print(f"Validation run {i+1}/{validation_runs}")
         passed = run_k6(max_vus, duration, rampup_time, test_script, args)
         if not passed:
@@ -94,7 +103,7 @@ def banner():
    {GREEN} $$  _$$<   $$  /       {ORANGE} /`            `\\
    {GREEN} \\__|  \\__|\\__/       {ORANGE}  /________________|    
    
-   {RESET}------------------------------------------------------------------------------------""" )
+{RESET}------------------------------------------------------------------------------------""" )
 
 
 if __name__ == "__main__":
@@ -150,7 +159,7 @@ if __name__ == "__main__":
         while True:
             try:
                 rampup_time = validate_positive_int(input("Enter the ramp up time (in seconds): "), "Ramp up time")
-                print("----------------------------\n")
+                print("------------------------------------------------------------------------------------\n")
                 break
             except argparse.ArgumentTypeError as e:
                 print(e)
