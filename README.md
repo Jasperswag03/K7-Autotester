@@ -24,7 +24,36 @@ The tests also validate that performance thresholds are met and ensure that the 
 In addition, the **K7 Python script** can be used to manage and execute tests with added flexibility, including verbosity (`--v`) and help (`--h`) flags.
 
 ---
+### Command-Line Arguments
+This script accepts the following options for configuring the test:
+- **`-vu` / `--initial_vus`**: Set the initial number of virtual users. Lower values help when tests fail immediately.
+- **`-i` / `--increment`**: Set the increment for virtual users. Smaller increments increase accuracy but take longer to determine the stable VU count. Default: 100.
+- **`-vr` / `--validation_runs`**: Set the number of validation runs. Default is 4.
+- **`-d` / `--delay_between_tests`**: Set the delay between tests in seconds. Default is 10 seconds.
+- **`-t` / `--duration`**: Set the K6 test duration in seconds. Default is 60 seconds.
+- **`-rt` / `--rampup_time`**: Set the ramp-up time in seconds. Default is 15 seconds.
+- **`-v` / `--verbose`**: Enable verbose output, showing K6 logs.
+- **`--k6_script`**: Specify the path to the K6 test script. Refer to the template for structure.
 
+### Running the Command
+You can run the script with all the arguments in a single command, like so:
+`python k7.py -vu 100 -i 50 -vr 5 -d 5 -t 60 -rt 30 -v --k6_script test-script.js`
+
+This example runs the script with the following:
+- Initial 100 virtual users (`-vu 100`)
+- Increment of 50 virtual users (`-i 50`)
+- 5 validation runs (`-vr 5`)
+- 15 seconds delay between tests (`-d 5`)
+- Test duration of 120 seconds (`-t 60)
+- 30 seconds ramp-up time (`-rt 30`)
+- Verbose output enabled (`-v`)
+- Using `test-script.js` as the K6 test script (`--k6_script test-script.js`), you can add your own test-script to this if you want.
+
+### Notes:
+- **`-v` (verbose) output** will display detailed logs.
+- **`--k6_script`** should point to the K6 test script you're using.
+
+---
 ## Test Script
 The main test script (`test-script.js`) simulates virtual users (VUs) performing HTTP GET requests. The script is designed with two load phases and uses K6's `ramping-vus` and `constant-vus` executors to control how VUs are scaled.
 
@@ -70,36 +99,6 @@ export default function () {
 ```
 
 ---
-### Command-Line Arguments
-This script accepts the following options for configuring the test:
-- **`-vu` / `--initial_vus`**: Set the initial number of virtual users. Lower values help when tests fail immediately.
-- **`-i` / `--increment`**: Set the increment for virtual users. Smaller increments increase accuracy but take longer to determine the stable VU count. Default: 100.
-- **`-vr` / `--validation_runs`**: Set the number of validation runs. Default is 4.
-- **`-d` / `--delay_between_tests`**: Set the delay between tests in seconds. Default is 10 seconds.
-- **`-t` / `--duration`**: Set the K6 test duration in seconds. Default is 60 seconds.
-- **`-rt` / `--rampup_time`**: Set the ramp-up time in seconds. Default is 15 seconds.
-- **`-v` / `--verbose`**: Enable verbose output, showing K6 logs.
-- **`--k6_script`**: Specify the path to the K6 test script. Refer to the template for structure.
-
-### Running the Command
-You can run the script with all the arguments in a single command, like so:
-`python script.py -vu 100 -i 50 -vr 5 -d 15 -t 120 -rt 30 -v --k6_script test-script.js`
-
-This example runs the script with the following:
-- Initial 100 virtual users (`-vu 100`)
-- Increment of 50 virtual users (`-i 50`)
-- 5 validation runs (`-vr 5`)
-- 15 seconds delay between tests (`-d 15`)
-- Test duration of 120 seconds (`-t 120`)
-- 30 seconds ramp-up time (`-rt 30`)
-- Verbose output enabled (`-v`)
-- Using `test-script.js` as the K6 test script (`--k6_script test-script.js`)
-
-### Notes:
-- **`-v` (verbose) output** will display detailed logs.
-- **`--k6_script`** should point to the K6 test script you're using.
-
----
 ## Authentication Setup (Optional)
 
 If your test requires JWT authentication, you can set up the login flow as follows:
@@ -134,13 +133,7 @@ export default function (accessToken) {
 ```
 
 ---
-## Running the Test
-1. Install K6 by following the official installation guide.
-2. Run the K6 script with the following command:
-    `k6 run test-script.js`
-3. Check the K6 output for detailed logs, test progress, and results.
 
----
 ## Thresholds and Validation
 The following performance thresholds are defined for validation:
 - **HTTP request failures**: The failure rate should be 0% (`rate==0`).
@@ -152,7 +145,5 @@ If the thresholds are exceeded, the test will be aborted.
 ## Endpoints Supported
 - **GET** requests are supported for fetching data (e.g., `/channel`, `/channel/create`).
 - **POST** requests are supported with JSON bodies (e.g., for authentication).
-
-The **TRACE** method is not supported in K6.
 
 ---
