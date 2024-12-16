@@ -19,7 +19,6 @@ While K6 provides the core load testing capabilities, K7 adds advanced orchestra
 7. [Endpoints Supported](#endpoints-supported)
 
 ---
-
 ## Overview
 The system runs K6 load tests with two primary phases:
 1. **Ramp-Up Phase**: Virtual users are gradually increased.
@@ -44,7 +43,9 @@ This script accepts the following options for configuring the test:
 
 ### Running the Command
 You can run the script with all the arguments in a single command, like so:
-`python k7.py -vu 100 -i 50 -vr 5 -d 5 -t 60 -rt 30 -v --k6_script test-script.js`
+```bash
+python k7.py -vu 100 -i 50 -vr 5 -d 5 -t 60 -rt 30 -v --k6_script test-script.js
+```
 
 This example runs the script with the following:
 - Initial 100 virtual users (`-vu 100`)
@@ -140,7 +141,6 @@ export default function (accessToken) {
 ```
 
 ---
-
 ## Thresholds and Validation
 The following performance thresholds are defined for validation:
 - **HTTP request failures**: The failure rate should be 0% (`rate==0`).
