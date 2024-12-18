@@ -36,12 +36,12 @@ def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_betwe
             print(f"Fails: {failed_tests}/{fails_allowed}")
         passed = run_k6(current_vus, duration, rampup_time, test_script, args)
         if passed:
-            print(f"Test passed for {current_vus} VUs.")
+            print(f"\033[92;1;4mTest passed for {current_vus} VUs.\033[0m")
             current_vus += increment
             print(f"Waiting {delay_between_tests} seconds before the next test...\n")
             time.sleep(delay_between_tests)
         else:
-            print(f"Test failed for {current_vus} VUs.")
+            print(f"\033[31;1;4mTest failed for {current_vus} VUs.\033[0m")
             if (failed_tests == fails_allowed):
                 reduced_vus = current_vus - (increment // 2)
                 print(f"Reducing VUs to {reduced_vus}. Now validating...\n")
@@ -60,7 +60,7 @@ def find_max_vus_decreasing(reduced_vus, increment, validation_runs, delay_betwe
         if validate_max_vus(reduced_vus, validation_runs, delay_between_tests, duration, rampup_time, fails_allowed, test_script, args):
             return reduced_vus
         else:
-            print(f"Validation failed for {reduced_vus} VUs.")
+            print(f"\033[31;1;4mValidation failed for {reduced_vus} VUs.\033[0m")
             reduced_vus -= (increment // 2)
             print(f"Reducing VUs further to {reduced_vus} and validating again...\n")
 
@@ -83,14 +83,14 @@ def validate_max_vus(max_vus, validation_runs, delay_between_tests, duration, ra
         passed = run_k6(max_vus, duration, rampup_time, test_script, args)
         
         if not passed:
-            print(f"Validation run {i+1} failed.")
+            print(f"\033[31;1;4mValidation run {i+1} failed.\033[0m")
             if failed_tests >= fails_allowed:
                 return False
             failed_tests += 1
             i -= 1
             print(f"Retrying run {i+2}")
         else:
-            print(f"Validation run {i+1} passed.")
+            print(f"\033[92;1;4mValidation run {i+1} passed.\033[0m")
         
         if i + 1 < validation_runs:
             print(f"Waiting {delay_between_tests} seconds before the next validation test...\n")
