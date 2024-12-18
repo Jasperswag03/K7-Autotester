@@ -36,6 +36,7 @@ def find_max_vus_increasing(initial_vus, increment, validation_runs, delay_betwe
             print(f"Fails: {failed_tests}/{fails_allowed}")
         passed = run_k6(current_vus, duration, rampup_time, test_script, args)
         if passed:
+            failed_tests = 0
             print(f"\033[92;1;4mTest passed for {current_vus} VUs.\033[0m")
             current_vus += increment
             print(f"Waiting {delay_between_tests} seconds before the next test...\n")
