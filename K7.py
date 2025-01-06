@@ -1,4 +1,5 @@
 import subprocess
+import sys
 import time
 import argparse
 
@@ -17,10 +18,16 @@ def run_k6(target_vus, duration, rampup_time, test_script, args):
     
     process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     stdout, stderr = process.communicate() 
-    if (args.verbose):  # k6 logging if -v
+    if stdout:
+        check_lines = [line for line in stdout.split("\n") if "http_req_failed" in line]
+        if check_lines:
+          print(f"failed requests: {check_lines[0].split(':', 1)[1].strip()}")
+        else :
+            sys.exit("problem with the k6 script")
+    if args.verbose:
         print(stdout)
         if stderr:
-         print(f"Error: {stderr}")
+            print(f"Error: {stderr}")
     
     process.wait()
     return process.returncode == 0
