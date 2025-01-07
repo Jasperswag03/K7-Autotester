@@ -12,12 +12,10 @@ While K6 provides the core load testing capabilities, K7 adds advanced orchestra
 
 1. [Overview](#overview)
 2. [Test Script](#test-script)
-3. [Configuration Options](#configuration-options)
-4. [Authentication Setup (Optional)](#authentication-setup-optional)
-5. [Running the Test](#running-the-test)
-6. [Thresholds and Validation](#thresholds-and-validation)
-7. [Endpoints Supported](#endpoints-supported)
-
+3. [Authentication Setup (Optional)](#authentication-setup-optional)
+4. [Thresholds and Validation](#thresholds-and-validation)
+5. [Endpoints Supported](#endpoints-supported)
+6. [Run Cycle](#run-cycle)
 ---
 ## Overview
 The system runs K6 load tests with two primary phases:
@@ -29,7 +27,7 @@ The tests also validate that performance thresholds are met and ensure that the 
 In addition, the **K7 Python script** can be used to manage and execute tests with added flexibility, including verbosity (`-v`/`--verbose`) and help (`-h`/`--help`) flags.
 
 ---
-### Command-Line Arguments
+### Command Line Arguments
 This script accepts the following options for configuring the test:
 * **`-h`/`--help`**: Returns a list of all the configuration options.
 - **`-vu` / `--initial_vus`**: Set the initial number of virtual users. Lower values help when tests fail immediately.
@@ -38,6 +36,7 @@ This script accepts the following options for configuring the test:
 - **`-d` / `--delay_between_tests`**: Set the delay between tests in seconds. Default is 10 seconds.
 - **`-t` / `--duration`**: Set the K6 test duration in seconds. Default is 60 seconds.
 - **`-rt` / `--rampup_time`**: Set the ramp-up time in seconds. Default is 15 seconds.
+- - **`-f` / `--fails`**: Specify the amount of times the k6 test can fail before k7 makes a conclusion. Resets after each new k6 test.
 - **`-v` / `--verbose`**: Enable verbose output, showing K6 logs.
 - **`--k6_script`**: Specify the path to the K6 test script. Refer to the template for structure.
 
@@ -152,4 +151,35 @@ If the thresholds are exceeded, the test will be aborted.
 ## Endpoints Supported
 All HTTP methods are support in K6 except for trace (which sucks anyway), for more information about this visit the [K6 docs](https://k6.io/).
 
+---
+## Run Cycle
+K7 follows a systematic approach to determine the maximum stable number of virtual users (VUs) your system can handle. The process includes the following steps:
+
+1. **Incremental Load Testing**:  
+   - The test begins with the initial number of VUs specified by the `--initial_vus` argument.  
+   - After each successful K6 test, K7 increases the VU count by the step size defined in `--increment`.  
+   - This process repeats until the test fails, signaling the point where the system can no longer sustain the load.
+
+2. **Retry Mechanism for Failures**:  
+   - If a test fails, K7 retries the same configuration up to the limit set by the `--fails` argument.  
+   - This ensures temporary issues or fluctuations do not skew the results.
+
+3. **Refining the VU Count**:  
+   - When a failure persists, K7 reduces the VU count by half of the increment value.  
+   - The system is then retested with this reduced load.  
+   - This back-and-forth adjustment continues until a stable VU count is identified.
+
+4. **Validation Runs**:  
+   - Once a stable configuration is found, K7 validates it by rerunning the test multiple times.  
+   - The number of consecutive successful runs required is specified by the `--validation_runs` argument.  
+   - If any validation test fails, the process resumes to fine-tune the VU count.
+
+5. **Final Results**:  
+   - After passing all validations, K7 reports the maximum number of stable VUs the system can support.  
+   - Along with the VU count, K7 also outputs the number of lost requests from each test iteration for detailed performance analysis.
+
+6. **Error Handling**:  
+   - If a K6 test encounters an error that prevents execution, K7 immediately stops and exits with the error.  
+   - This ensures critical issues are highlighted and resolved before proceeding.
+  
 ---
